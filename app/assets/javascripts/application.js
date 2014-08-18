@@ -12,6 +12,11 @@
 //
 //= require jquery
 //= require jquery_ujs
-//= require react-0.10.0
-//= require JSXTransformer-0.10.0
-//= require showdown.min
+//= require ./reactjs/libraries/react-0.10.0
+//= require ./reactjs/libraries/JSXTransformer-0.10.0
+//= require ./reactjs/libraries/showdown.min
+
+//= require ./backbonejs/libraries/jquery.simplemodal-1.4.5
+//= require ./backbonejs/libraries/underscore-1.5.2
+//= require ./backbonejs/libraries/backbone-1.1.0
+//= require ./backbonejs/libraries/backbone.marionette-1.4.0
