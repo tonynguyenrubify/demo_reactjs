@@ -16,13 +16,26 @@ var Comment = React.createClass({
 
 var CommentList = React.createClass({
   render: function() {
+    var _this = this;
     var commentNodes = this.props.data.map(function (comment) {
+      if (comment.author.indexOf(_this.props.filterText) === -1) {
+        return;
+      }
       return (
         <Comment author={comment.author}>
           {comment.description}
         </Comment>
       );
-    });
+    }.bind(this));
+    console.log(this.props);
+    // var rows = [];
+    // var lastCategory = null;
+    // this.props.data.forEach(function(comment) {
+    //     if (comment.author.indexOf(this.props.filterText) === -1) {
+    //         return;
+    //     }
+    //     rows.push(<Comment author={comment.author}>{comment.description}</Comment>);
+    // }.bind(this));
     return (
       <div className="commentList">
         {commentNodes}
@@ -54,6 +67,26 @@ var CommentForm = React.createClass({
   }
 });
 
+var SearchBar = React.createClass({
+  handleChange: function() {
+    this.props.onUserInput(
+      this.refs.filterTextInput.getDOMNode().value
+    );
+  },
+  render: function() {
+    return (
+      <form>
+        <input
+          type="text"
+          placeholder="Search..."
+          value={this.props.filterText}
+          ref="filterTextInput"
+          onChange={this.handleChange}
+        />
+      </form>
+    );
+  } 
+});
 
 var CommentBox = React.createClass({
   loadCommentsFromServer: function() {
@@ -67,6 +100,10 @@ var CommentBox = React.createClass({
         console.error(this.props.url, status, err.toString());
       }.bind(this)
     });
+  },
+  
+  handleUserInput: function(filterText) {
+    this.setState({filterText: filterText});
   },
   
   handleCommentSubmit: function(comment) {
@@ -85,7 +122,7 @@ var CommentBox = React.createClass({
   },
   
   getInitialState: function() {
-    return {data: []};
+    return {data: [], filterText: ''};
   },
   componentDidMount: function() {
     this.loadCommentsFromServer();
@@ -95,7 +132,14 @@ var CommentBox = React.createClass({
     return (
       <div className="commentBox">
         <h1>Listing Books</h1>
-        <CommentList data={this.state.data} />
+        <SearchBar
+          filterText={this.state.filterText}
+          onUserInput={this.handleUserInput}
+        />
+        <CommentList 
+          data={this.state.data}
+          filterText={this.state.filterText}
+        />
         <CommentForm onCommentSubmit={this.handleCommentSubmit} />
       </div>
     );
