@@ -1,10 +1,107 @@
 /** @jsx React.DOM */
+
+
+var BootstrapButton = React.createClass({
+  render: function() {
+    // transferPropsTo() is smart enough to merge classes provided
+    // to this component.
+    return this.transferPropsTo(
+      <a href="javascript:;" role="button" className="btn">
+        {this.props.children}
+      </a>
+    );
+  }
+});
+
+var BootstrapModal = React.createClass({
+  // The following two methods are the only places we need to
+  // integrate with Bootstrap or jQuery!
+  componentDidMount: function() {
+    // When the component is added, turn it into a modal
+    $(this.getDOMNode())
+      .modal({backdrop: 'static', keyboard: false, show: false})
+  },
+  componentWillUnmount: function() {
+    $(this.getDOMNode()).off('hidden', this.handleHidden);
+  },
+  close: function() {
+    $(this.getDOMNode()).modal('hide');
+  },
+  open: function() {
+    $(this.getDOMNode()).modal('show');
+  },
+  render: function() {
+    var confirmButton = null;
+    var cancelButton = null;
+
+    if (this.props.confirm) {
+      confirmButton = (
+        <BootstrapButton
+          onClick={this.handleConfirm}
+          className="btn-primary">
+          {this.props.confirm}
+        </BootstrapButton>
+      );
+    }
+    if (this.props.cancel) {
+      cancelButton = (
+        <BootstrapButton onClick={this.handleCancel}>
+          {this.props.cancel}
+        </BootstrapButton>
+      );
+    }
+
+    return (
+      <div className="modal hide fade">
+        <div className="modal-header">
+          <button
+            type="button"
+            className="close"
+            onClick={this.handleCancel}
+            dangerouslySetInnerHTML={{__html: '&times'}}
+          />
+          <h3>{this.props.title}</h3>
+        </div>
+        <div className="modal-body">
+          <input type="text" placeholder="Your name" ref="authorEdit" defaultValue={this.props.comment.author}/>
+          <input type="text" placeholder="Say something..." ref="descriptionEdit"  defaultValue={this.props.comment.description} />
+        </div>
+        <div className="modal-footer">
+          {cancelButton}
+          {confirmButton}
+        </div>
+      </div>
+    );
+  },
+  handleCancel: function() {
+    if (this.props.onCancel) {
+      this.props.onCancel();
+    }
+  },
+  handleConfirm: function() {
+    if (this.props.onConfirm) {
+      // this.props.onConfirm();
+      
+      var author = this.refs.authorEdit.getDOMNode().value.trim();
+      var text = this.refs.descriptionEdit.getDOMNode().value.trim();
+      if (!text || !author) {
+        return false;
+      }
+      this.props.onConfirm({book: {author: author, description: text, id: this.props.comment.id}}, this.props.comment.id);
+      // this.refs.authorEdit.getDOMNode().value = '';
+      // this.refs.descriptionEdit.getDOMNode().value = '';
+      return false;
+    }
+  }
+});
+
 var TestingMenu = React.createClass({
   render: function() {
       return (
         <div>
           <a href='#listBooks'> Show List Books get form server </a> | 
           <a href='#filterSearch'> Show Filter Search demo </a>
+          
         </div>
     );
   }
@@ -138,11 +235,41 @@ var PRODUCTS = [
  
 var converter = new Showdown.converter();
 var Comment = React.createClass({
+  handleCancel: function() {
+    if (confirm('Are you sure you want to cancel?')) {
+      this.refs.modal.close();
+    }
+  },
+  openModal: function() {
+    this.refs.modal.open();
+  },
+
+  closeModal: function(comment, id) {
+    console.log(id);
+    console.log(comment);
+    this.props.onCommentEdit(comment, id);
+    this.refs.modal.close();
+  },
+  
   render: function() {
     var rawMarkup = converter.makeHtml(this.props.children.toString());
+    var modal = null;
+    modal = (
+      <BootstrapModal
+        comment={this.props.comment}
+        ref="modal"
+        confirm="OK"
+        cancel="Cancel"
+        onCancel={this.handleCancel}
+        onConfirm={this.closeModal}
+        title="Edit this content!">
+      </BootstrapModal>
+    );
+    
     return (
-      <div className="comment">
-        <h2 className="commentAuthor">
+      <div className="comment" >
+        {modal}
+        <h2 className="commentAuthor" onClick={this.openModal}>
           {this.props.author}
         </h2>
         <span dangerouslySetInnerHTML={{__html: rawMarkup}} />
@@ -159,7 +286,7 @@ var CommentList = React.createClass({
         return;
       }
       return (
-        <Comment author={comment.author}>
+        <Comment author={comment.author} comment={comment} onCommentEdit={_this.props.onCommentEdit}>
           {comment.description}
         </Comment>
       );
@@ -258,6 +385,21 @@ var CommentBox = React.createClass({
     });
   },
   
+  handleCommentUpdate: function(comment, id) {
+    $.ajax({
+      url: "api/books/" + id,
+      dataType: 'json',
+      type: 'PUT',
+      data: comment,
+      success: function(data) {
+        this.setState({data: data});
+      }.bind(this),
+      error: function(xhr, status, err) {
+        console.error(this.props.url, status, err.toString());
+      }.bind(this)
+    });
+  },
+  
   getInitialState: function() {
     return {data: [], filterText: ''};
   },
@@ -277,6 +419,7 @@ var CommentBox = React.createClass({
         <CommentList 
           data={this.state.data}
           filterText={this.state.filterText}
+          onCommentEdit={this.handleCommentUpdate}
         />
         <CommentForm onCommentSubmit={this.handleCommentSubmit} />
       </div>

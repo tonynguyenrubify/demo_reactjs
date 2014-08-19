@@ -14,7 +14,7 @@ class Api::BooksController < ApiController
     if @book.present?
       @book.attributes = params[:book]
       if @book.save
-        render :json => @book
+        render :json => Book.all
       else
         render :json => {errors: "Failed"}
       end
